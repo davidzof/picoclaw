@@ -4,7 +4,18 @@ You have probably heard a lot about OpenClaw recently and the derivatives like n
 
 I want to explain what PicoClaw is and how PicoClaw compares to OpenClaw. We’ll then look at creating a single skill with no coding then something more advanced.
 
-<img width="1536" height="1024" alt="pico-vs-open" src="https://github.com/user-attachments/assets/46467d60-dd28-4cbe-b767-decb210872e9" />
+<div style="display: inline-flex; align-items: center;">
+  <!-- Video Thumbnail -->
+  <a href="[https://www.youtube.com/watch?v=5yLzZikS15k](https://www.youtube.com/embed/0J8p2Vyfu-M?si=Yla8myGXzdYMMgXc)" target="_blank" style="display: inline-block;">
+    <img width="1536" height="1024" alt="pico-vs-open" src="https://github.com/user-attachments/assets/46467d60-dd28-4cbe-b767-decb210872e9" />
+  </a>
+
+  <!-- Play Button -->
+  <a href="https://www.youtube.com/watch?v=5yLzZikS15k" target="_blank" style="display: inline-block;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_play_button_icon_%282013%E2%80%932017%29.svg" 
+         style="width: 50px; height: auto; margin-left: 5px;">
+  </a>
+</div>
 
 PicoClaw is an open-source AI agent project written in Go, designed to be very lightweight and portable. The project describes itself as an ultra-lightweight personal AI assistant that can run on very modest hardware, and it emphasizes low memory use, fast startup, and a single-binary deployment model. PicoClaw is neither an AI itself nor a chatbot, at its core is an Agent Loop. That means it can receive a request, decide to use local tools, run those tools, inspect the results, and continue until it has an answer. It is often referred to an AI orchestrator. Rather than the end user interacting with an LLM like OpenAI or Gemini PicoClaw does this using their APIs. Requests are sent in JSON format, the LLM responds and the agent decides whether or not the request is satisfied. This means that context is retained during the loop and the agent can even retain information (context) in its memory and session stores for use in later requests.
 
@@ -20,9 +31,20 @@ The big difference is the design philosophy.
 
 OpenClaw is generally the heavier, more full-featured ecosystem. PicoClaw is stripped-down and lightweight aimed at low-resource environments. It can even run on a $10 microcontroller. It claims much lower memory usage and much faster startup than OpenClaw.
 
+## PicoClaw Config
+
+This repo contains the config I use (OpenRouter for the LLM)
+
 ## Extending Open/PicoClaw with Skills
 
 If you’ve seen a Open/PicoClaw skill before, it can look surprisingly simple, sometimes it’s just a SKILL.md file with instructions in it. That can make the whole system feel a bit mysterious at first, because you naturally ask: if it’s just Markdown, what is actually doing the work?
+
+## Skills in this Repo
+
+  * simple skill to give the user's IP address and location
+  * Brief - Download and analyze stock information based on their tickers
+  * Market Watch - Extract news headlines related to the stock tickers 
+  * Analysis - Combine the Brief and Market Watch output to analyze current share prices
 
 ### Lets break it down using a simple IP skill example
 
@@ -50,21 +72,57 @@ here is the rough sequence.
 
 That is the key architecture: the model decides what to do, and PicoClaw executes it safely through its registered tools.
 
+### This can seem strange
 
-## PicoClaw Config
+Claw skills can feel both powerful and a bit strange. The normal plugin system is usually rigid:
 
-This repo contains the config I use (OpenRouter for the LLM)
+1. you define a function,
+2. the framework calls the function,and the result comes back.
+   
+PicoClaw skills are more like instructions for the model. So the system is split in two:
+1. PicoClaw provides the tools and the execution environment.
+2. The LLM reads the skill and decides how to use those tools.
+
+That is also why skills can sometimes go wrong if they are vague. If the instructions are unclear, the model can misinterpret them. In testing, that is exactly the kind we saw. The SKILL.md file was being overwritten by PicoClaw because the LLM (Grok) told it to put the result here. We added a line in the SKILL.md file to tell the LLM not to do this. The SKILL.md file also didn't contain the "command" information originally despite referencing this in the description. The LLM spotted this, saw a url in homepage section and surmised that PicoClaw should run _curl_ on this url to get the results. So despite the bug the SKILL still worked correctly. This is very clever but these kind of bugs should always be fixed as they are inefficient and consume both requests and tokens (words) on the LLM which can be costly. You can check how your skill is executed by running PicoClaw in debug mode (see video above).
+
+### Are Skills efficient?
+And this raises an important question: Wouldn’t plain coding often be simpler and more efficient?
+
+In many cases, yes.
+
+If all you want is the public IP address, a small Python script or a single curl command is clearly faster, cheaper, and more deterministic than involving an LLM in the loop. So for fixed, well-defined tasks, traditional coding is usually the better engineering choice.
+
+Where PicoClaw becomes interesting is when the workflow is not fixed:
+  * when the agent has to choose between tools,
+  * read instructions dynamically,
+  * inspect outputs,
+  * and retry,
+  * or chain multiple steps together.
+
+In other words, PicoClaw shines when you want orchestration and reasoning, not just raw execution.
+
+For simple tasks, write code.
+For flexible, multi-step, tool-using workflows, PicoClaw becomes valuable.
+
+### Share Price Skill (Brief)
+
+My actual aim was to use PicoClaw to analyze share prices. To this aim I wrote a [Python script] that uses yahooquery to pull historical price data and calculate:
+1. 1-day return
+2. 5-day return
+3. distance from the 20-day moving average
+4. volume vs average
+
+and assigns a simple signal like extended_up
+
+After testing this on the command line I wrote a Skill to wrap this code so PicoClaw can answer the question: _“What are these stocks doing right now?”_
 
 
-## Skills
 
-  * simple skill to give the user's IP address and location
-  * Brief - Download and analyze stock information based on their tickers
-  * Market Watch - Extract news headlines related to the stock tickers 
-  * Analysis - Combine the Brief and Market Watch output to analyze current share prices
+### Market Information Skill (Market Watch)
 
+### Analysis Skill
 
-## Example of use
+#### Example of use
 
 $ picoclaw agent
 
