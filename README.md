@@ -33,7 +33,34 @@ OpenClaw is generally the heavier, more full-featured ecosystem. PicoClaw is str
 
 ## PicoClaw Config
 
-This repo contains the config I use (OpenRouter for the LLM)
+I tried several  LLM options: gemini, grok, chatgpt codex as the AI backend for PicoClaw but all had quite severe restrictions on free tier for testing. I eventually configured OpenRouter which gave good results. This is my config:
+
+"agents": {
+  "defaults": {
+  "workspace": "~/.picoclaw/workspace",
+  "restrict_to_workspace": true,
+  "allow_read_outside_workspace": false,
+  "provider": "",
+  "model_name": "step-3.5-flash",
+  "max_tokens": 8192,
+  "temperature": 0.7,
+  "max_tool_iterations": 20,
+  "summarize_message_threshold": 20,
+  "summarize_token_percent": 75,
+  "steering_mode": "one-at-a-time",
+...
+
+"model_list": [
+  {
+    "model_name": "step-3.5-flash",
+    "model": "step-3.5-flash",
+    api_base": "https://openrouter.ai/api/v1",
+    "api_key": "sk-or-v1-****",
+    "extra_headers": {
+      "HTTP-Referer": "https://github.com/yourname/picoclaw",
+      "X-Title": "PicoClaw Agent"
+    }
+  },
 
 ## Extending Open/PicoClaw with Skills
 
@@ -106,7 +133,7 @@ For flexible, multi-step, tool-using workflows, PicoClaw becomes valuable.
 
 ### Share Price Skill (Brief)
 
-My actual aim was to use PicoClaw to analyze share prices. To this aim I wrote a [Python script] that uses yahooquery to pull historical price data and calculate:
+My actual aim was to use PicoClaw to analyze share prices. To this aim I wrote a [Python script](brief/brief.py) that uses yahooquery to pull historical price data and calculate:
 1. 1-day return
 2. 5-day return
 3. distance from the 20-day moving average
@@ -114,13 +141,59 @@ My actual aim was to use PicoClaw to analyze share prices. To this aim I wrote a
 
 and assigns a simple signal like extended_up
 
-After testing this on the command line I wrote a Skill to wrap this code so PicoClaw can answer the question: _“What are these stocks doing right now?”_
+After testing this on the command line I wrote a [Skill](brief/SKILL.md) to wrap this code so PicoClaw can answer the question: _“What are these stocks doing right now?”_
 
+🦞 You: /use brief
+ 
+🦞 Skill "brief" is armed for your next message. Send your next prompt normally, or use /use clear to cancel.
 
+🦞 You: Analyze these stocks: AKE.PA SOLB.BR AI.PA
+ 
+_🦞 All three stocks are trading above their 20-day moving averages, indicating short-term strength, but they show divergent recent performance. AKE.PA emerges as the clear strongest 5-day performer with a 1.99% gain, while AI.PA has been nearly flat at -0.45% and SOLB.BR is essentially unchanged at -0.07% over the same period. Despite this divergence, two of the three carry an "extended_up" signal, while SOLB.BR sits in neutral territory. A common thread across the group is exceptionally light volume—ranging from 53% to 69% of the 20-day average—suggesting these moves lack strong conviction and may be reactive to macro events rather than fundamental catalysts._
+
+That's quite useful but it doesn't really tell us why the stocks are moving in any particular direction.
 
 ### Market Information Skill (Market Watch)
 
+Because numbers alone don’t explain the move. So next, I built a second skill: [market watch](market_watch/SKILL.md).
+
+This one uses a [python script](market_watch/market_watch.py) to :
+
+1. pull recent news using Google News RSS
+2. filter for relevant topics like: oil, geopolitics, inflation
+
+and extracts key drivers
+
+Now the AI can answer:_ “What’s happening in the broader market?”_
+
+For example:
+  * oil price volatility
+  * geopolitical tensions
+  * ceasefire announcements
+
+So now we have:
+
+1. stock data → what happened
+2. market context → what might explain it
+
 ### Analysis Skill
+
+This is where things get interesting. Individually, both skills are useful but the real power comes from combining them. So I created a third skill called stock_explainer. This is just a [SKILL.md](analysis/SKILL.md) file that:
+
+  * runs the stock briefing
+  * runs the market watch
+  * tells the AI to merge the results into one answer
+
+Instead of:
+
+❌ “Here’s the stock data”
+❌ “Here’s the market news”
+
+We get:
+
+✅ “Stocks moved like this… likely because of this macro event”
+
+The initial version of this skill had a bug and refered to market_context.py as the script to run. In conversation between the LLM and PicoClaw it identified that this script did not exist but a script called market_watch.py existed so it ran this instead. That's quite clever but also highlights a security risk as you may not want to run similarly named random scripts. Be careful what scripts are available to the Agent, in this case it was the right thing to do.
 
 #### Example of use
 
@@ -128,16 +201,21 @@ $ picoclaw agent
 
 🦞 You: compare AKE.PA and AI.PA
 
-🦞 _Both AKE.PA and AI.PA are currently showing an "extended_up" signal, trading above their 20-day moving averages. AKE.PA emerges as the stronger recent mover with a 3.15% gain over the past five days, while AI.PA has been nearly flat with a -0.02% return. Despite this divergence in short-term performance, both stocks are only moderately extended above their moving averages—5.76% for AKE.PA and 3.63% for AI.PA—and both are trading on extremely light volume, at just 5% of their average 20-day volume. This suggests limited conviction behind the moves.
+🦞 _Both AKE.PA and AI.PA are currently showing an "extended_up" signal, trading above their 20-day moving averages. AKE.PA emerges as the stronger recent mover with a 3.15% gain over the past five days, while AI.PA has been nearly flat with a -0.02% return. Despite this divergence in short-term performance, both stocks are only moderately extended above their moving averages—5.76% for AKE.PA and 3.63% for AI.PA—and both are trading on extremely light volume, at just 5% of their average 20-day volume. This suggests limited conviction behind the moves._
 
-The broader market context is dominated by oil price volatility driven by US-Iran ceasefire developments. Recent headlines show oil swinging dramatically on ceasefire hopes and concerns, with one report noting a $950 million bet on falling oil prices ahead of the ceasefire announcement, followed by multiple 6-9% price swings as the situation evolved. Energy-sensitive sectors are reacting to these macro developments, with broad sector moves appearing driven by geopolitical events rather than company-specific news.
+_The broader market context is dominated by oil price volatility driven by US-Iran ceasefire developments. Recent headlines show oil swinging dramatically on ceasefire hopes and concerns, with one report noting a $950 million bet on falling oil prices ahead of the ceasefire announcement, followed by multiple 6-9% price swings as the situation evolved. Energy-sensitive sectors are reacting to these macro developments, with broad sector moves appearing driven by geopolitical events rather than company-specific news._
 
-This macro context directly explains the behavior of both AKE.PA (Aker ASA) and AI.PA (Air Liquide), which are energy-related stocks sensitive to oil prices. The modest gains and notably light volume indicate these moves are primarily macro-driven rather than fueled by individual company catalysts. AKE.PA's slightly stronger five-day performance may reflect greater sensitivity to oil price fluctuations, but both stocks are participating in the same sector-wide trend. The "extended_up" signal fits the pattern: oil price volatility has lifted energy stocks above their moving averages, though the anemic volume suggests traders remain cautious about the sustainability of the ceasefire and its impact on energy markets._
+_This macro context directly explains the behavior of both AKE.PA (Aker ASA) and AI.PA (Air Liquide), which are energy-related stocks sensitive to oil prices. The modest gains and notably light volume indicate these moves are primarily macro-driven rather than fueled by individual company catalysts. AKE.PA's slightly stronger five-day performance may reflect greater sensitivity to oil price fluctuations, but both stocks are participating in the same sector-wide trend. The "extended_up" signal fits the pattern: oil price volatility has lifted energy stocks above their moving averages, though the anemic volume suggests traders remain cautious about the sustainability of the ceasefire and its impact on energy markets._
 
 🦞 You: analyse DOW
  
-🦞 _DOW (Dow Inc.) is currently displaying an "extended_down" signal, trading 6.74% below its 20-day moving average with an 8.33% decline over the past five trading days, indicating a clear short-term downtrend. However, the stock showed a notable 3.29% bounce in the most recent session, offering some relief from the broader decline. Trading volume on this bounce was slightly below average at 79% of the 20-day average, suggesting moderate conviction behind the recovery attempt. The stock appears to be caught in a corrective phase, with the extended_down signal reflecting the recent weakness.
+🦞 _DOW (Dow Inc.) is currently displaying an "extended_down" signal, trading 6.74% below its 20-day moving average with an 8.33% decline over the past five trading days, indicating a clear short-term downtrend. However, the stock showed a notable 3.29% bounce in the most recent session, offering some relief from the broader decline. Trading volume on this bounce was slightly below average at 79% of the 20-day average, suggesting moderate conviction behind the recovery attempt. The stock appears to be caught in a corrective phase, with the extended_down signal reflecting the recent weakness._
 
-The broader market context is dominated by geopolitical developments surrounding US-Iran ceasefire negotiations, which have triggered extreme oil price volatility. Recent headlines show oil swinging wildly—rising 6% on ceasefire collapse fears, then falling 9% after Iran declared the Strait of Hormuz open and expectations that talks will proceed. Energy-sensitive sectors are reacting sharply to these macro events, with broad-based moves driven by geopolitical factors rather than company-specific news.
+_The broader market context is dominated by geopolitical developments surrounding US-Iran ceasefire negotiations, which have triggered extreme oil price volatility. Recent headlines show oil swinging wildly—rising 6% on ceasefire collapse fears, then falling 9% after Iran declared the Strait of Hormuz open and expectations that talks will proceed. Energy-sensitive sectors are reacting sharply to these macro events, with broad-based moves driven by geopolitical factors rather than company-specific news._
 
-This macro context directly explains DOW's behavior as a chemicals company highly sensitive to oil price fluctuations and economic conditions. The five-day decline aligns with periods of oil price uncertainty and potential supply disruptions that increase feedstock costs and economic uncertainty. The recent bounce coincides with headlines about oil falling on improved ceasefire prospects, which would lower input costs and ease economic pressures. The below-average volume on the bounce indicates traders are cautiously responding to macro-driven price swings rather than fundamental catalysts, making DOW's recent action primarily a reflection of energy market volatility during this geopolitical episode._
+_This macro context directly explains DOW's behavior as a chemicals company highly sensitive to oil price fluctuations and economic conditions. The five-day decline aligns with periods of oil price uncertainty and potential supply disruptions that increase feedstock costs and economic uncertainty. The recent bounce coincides with headlines about oil falling on improved ceasefire prospects, which would lower input costs and ease economic pressures. The below-average volume on the bounce indicates traders are cautiously responding to macro-driven price swings rather than fundamental catalysts, making DOW's recent action primarily a reflection of energy market volatility during this geopolitical episode._
+
+# Debugging and Security
+
+We've seen that the LLM is quite good at correcting problems in skills. At the same time bear in mind that requests and tokens cost money. All the back and forwards sending large amounts of context (tokens) can generate quite a lot of usage. It can be worth setting limits on your LLMs consumption and running PicoClaw with the "-d" debug option to identify errors and optimize scripts and skills. You also need to be careful what is being run and what local tools are available. For example PicoClaw can have write_file access removed. It is worth running the AI assistant on a seperate machine, in PicoClaw's case that could be a Raspberry Pi. If you access databases use an account with read only access and restricted rights.
+
