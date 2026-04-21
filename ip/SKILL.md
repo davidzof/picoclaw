@@ -19,3 +19,10 @@ Use this skill to get the current public IP address and rough geolocation of the
 - Never modify this SKILL.md file.
 - Return the answer directly in chat.
 - If the request fails or returns empty output, say that the public IP could not be determined.
+
+## Command
+
+Run exactly this command:
+
+```bash
+curl -s "https://ipapi.co/json/"
