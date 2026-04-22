@@ -34,7 +34,7 @@ OpenClaw is generally the heavier, more full-featured ecosystem. PicoClaw is str
 ## PicoClaw Config
 
 I tried several  LLM options: gemini, grok, chatgpt codex as the AI backend for PicoClaw but all had quite severe restrictions on free tier for testing. I eventually configured OpenRouter which gave good results. This is my config:
-
+```
 "agents": {
   "defaults": {
   "workspace": "~/.picoclaw/workspace",
@@ -61,7 +61,7 @@ I tried several  LLM options: gemini, grok, chatgpt codex as the AI backend for 
       "X-Title": "PicoClaw Agent"
     }
   },
-
+```
 ## Extending Open/PicoClaw with Skills
 
 If you’ve seen a Open/PicoClaw skill before, it can look surprisingly simple, sometimes it’s just a SKILL.md file with instructions in it. That can make the whole system feel a bit mysterious at first, because you naturally ask: if it’s just Markdown, what is actually doing the work?
@@ -198,6 +198,21 @@ The initial version of this skill had a bug and refered to market_context.py as 
 #### Example of use
 
 $ picoclaw agent
+
+🦞 You: analyze soi.pa
+ 
+🦞 **Paragraph 1 — Stock behavior**
+
+_SOI.PA (Soitec SA) has entered a parabolic phase, exploding 11.76% in the most recent session alone and surging 46.58% over the past five trading days to close at 112.6. The stock now trades an extraordinary 66.82% above its 20-day moving average, reflecting a severely overextended rally that is testing the limits of technical rationality. Remarkably, volume has actually compressed to 0.65 times the 20-day average during this climb—a divergence that often signals weakening conviction behind the advance. The extended_up signal is now flashing red, indicating the stock is in dangerous territory from a momentum perspective. Such a steep ascent without expanding volume suggests the move may be driven by a shrinking pool of buyers and could be vulnerable to a sharp reversal._
+
+**Paragraph 2 — Market context**
+
+_The macro environment analysis has shifted significantly, now classifying the SOI.PA move as primarily company-specific rather than macro-driven. While the broader backdrop still features semiconductor sector developments, geopolitical tensions, and energy market volatility, the freshest and most relevant headline is a Yahoo Finance article titled "Is It Too Late To Consider Soitec (ENXTPA:SOI) After The Recent Share Price Surge?"—directly addressing the stock's own explosive performance. The market context system flags company-specific news as the dominant catalyst, with no strong macro drivers uniquely tied to this ticker. This indicates that investors are focusing on Soitec's particular story rather than riding a broad sector wave._
+
+**Paragraph 3 — Connection**
+
+_The reclassification to company-specific context explains the volume divergence: when a stock's move is driven by its own narrative rather than sector-wide macro forces, participation often thins as the rally matures because fewer investors have conviction in the long-term sustainability. Soitec appears to be experiencing a classic "re-rating" event where the market is reassessing its valuation based on company-specific factors—possibly its strategic position in specialized semiconductor materials for AI applications, its competitive moat, or recent execution that has caught investors' attention. However, the extreme technical extension (+66.82% above MA20) combined with the volume contraction suggests the rally may be entering its final stages, with the Yahoo Finance article itself reflecting the growing anxiety about whether the price surge is justified. This looks like a company-specific momentum story that is becoming increasingly detached from fundamentals, raising the risk of a significant pullback as the narrative reaches saturation._
+
 
 🦞 You: compare AKE.PA and AI.PA
 
