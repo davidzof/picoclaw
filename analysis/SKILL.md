@@ -53,7 +53,7 @@ stock_data
 
 ### Step 2 — Run market context
 
-python3 skills/market_watch/market_watch.py --json
+python3 skills/market_watch/market_watch.py -t <TICKERS> --json
 
 Store the JSON output as:
 market_data
@@ -133,3 +133,53 @@ The final answer should read like a short analyst note:
 - structured
 - explanatory
 - not just descriptive
+---
+## CRITICAL EXECUTION RULE
+
+If the user provides one or more ticker symbols, you MUST pass the exact same ticker list to BOTH scripts.
+
+Correct pattern:
+
+python3 skills/brief/brief.py -t <TICKERS> --json
+python3 skills/market_watch/market_watch.py -t <TICKERS> --json
+
+This rule applies even when there is only ONE ticker.
+
+Examples:
+- analyze SOI.PA
+- analyze TGA.L
+- compare AAPL MSFT NVDA
+
+For all of these, the same ticker arguments MUST be passed to both scripts.
+
+---
+
+## FORBIDDEN
+
+These are incorrect:
+
+- running only brief.py when the skill is being used
+- running market_watch.py without `-t` when tickers were provided
+- inventing market context without running market_watch.py
+---
+## Example: single ticker
+
+If the user says:
+
+analyze SOI.PA
+
+You MUST run:
+
+python3 skills/brief/brief.py -t SOI.PA --json
+python3 skills/market_watch/market_watch.py -t SOI.PA --json
+---
+## Example: multiple tickers
+
+If the user says:
+
+analyze AKE.PA SOLB.BR AI.PA
+
+You MUST run:
+
+python3 skills/brief/brief.py -t AKE.PA SOLB.BR AI.PA --json
+python3 skills/market_watch/market_watch.py -t AKE.PA SOLB.BR AI.PA --json
